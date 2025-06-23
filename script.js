@@ -4,7 +4,7 @@ let playerPos = { x: 1, y: 1 };
 let chaserPos = { x: 13, y: 9 };
 let gameStarted = false;
 let playerImg = '';
-let chaserImg = 'chaser.png'; // Default chaser image
+let chaserImg = 'chaser.jpg'; // Default chaser image
 let moveInterval;
 let crownPos = null;
 let crownTimeout = null;
@@ -865,5 +865,28 @@ function placeCharacters() {
   }
   lastPlayerPos = { ...playerPos };
   lastChaserPos = { ...chaserPos };
+}
+
+// Joystick controls for mobile
+function setupJoystick() {
+  if (window.innerWidth >= 700) return;
+  const joy = document.getElementById('joystick');
+  if (!joy) return;
+  joy.querySelector('.joy-up').addEventListener('touchstart', e => { e.preventDefault(); movePlayer('up'); });
+  joy.querySelector('.joy-down').addEventListener('touchstart', e => { e.preventDefault(); movePlayer('down'); });
+  joy.querySelector('.joy-left').addEventListener('touchstart', e => { e.preventDefault(); movePlayer('left'); });
+  joy.querySelector('.joy-right').addEventListener('touchstart', e => { e.preventDefault(); movePlayer('right'); });
+  // Also support click for accessibility
+  joy.querySelector('.joy-up').addEventListener('click', () => movePlayer('up'));
+  joy.querySelector('.joy-down').addEventListener('click', () => movePlayer('down'));
+  joy.querySelector('.joy-left').addEventListener('click', () => movePlayer('left'));
+  joy.querySelector('.joy-right').addEventListener('click', () => movePlayer('right'));
+}
+window.addEventListener('DOMContentLoaded', setupJoystick);
+
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/service-worker.js');
+  });
 }
   

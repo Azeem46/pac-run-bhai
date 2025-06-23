@@ -892,3 +892,52 @@ body {
     margin-left: 8px;
   }
   
+  #joystick {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-end;
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 18px;
+    z-index: 100;
+    pointer-events: none;
+  }
+  #joystick .joy-btn {
+    width: 64px;
+    height: 64px;
+    margin: 6px;
+    font-size: 2.2em;
+    background: linear-gradient(135deg, #1976d2 60%, #64b5f6 100%);
+    color: #fff;
+    border: none;
+    border-radius: 18px;
+    box-shadow: 0 2px 8px #0003;
+    cursor: pointer;
+    pointer-events: auto;
+    transition: background 0.2s, transform 0.1s;
+    outline: none;
+    user-select: none;
+  }
+  #joystick .joy-btn:active, #joystick .joy-btn:focus {
+    background: #1565c0;
+    transform: scale(0.95);
+  }
+  #joystick .joy-row {
+    display: flex;
+    flex-direction: row;
+    justify-content: center;
+    align-items: center;
+  }
+  @media (min-width: 700px) {
+    #joystick {
+      display: none !important;
+    }
+  }
+  @media (max-width: 700px) {
+    #joystick {
+      display: flex;
+    }
+  }
+  
