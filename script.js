@@ -883,10 +883,4 @@ function setupJoystick() {
   joy.querySelector('.joy-right').addEventListener('click', () => movePlayer('right'));
 }
 window.addEventListener('DOMContentLoaded', setupJoystick);
-
-if ('serviceWorker' in navigator) {
-  window.addEventListener('load', () => {
-    navigator.serviceWorker.register('/service-worker.js');
-  });
-}
   
