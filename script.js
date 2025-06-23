@@ -21,6 +21,7 @@ let chasers = [];
 let movingObstacles = [];
 let teleporters = [];
 let timedEventTimeout = null;
+let bgAudio = null;
 
 // Touch controls for mobile
 let touchStartX = null, touchStartY = null;
@@ -443,6 +444,24 @@ function clearAdvancedMode() {
   if (timedEventTimeout) clearTimeout(timedEventTimeout);
 }
 
+function playClassicMusic() {
+  if (bgAudio) {
+    bgAudio.pause();
+    bgAudio.currentTime = 0;
+  }
+  bgAudio = new Audio('audio/robot.mp3');
+  bgAudio.loop = true;
+  bgAudio.volume = 0.5;
+  bgAudio.play();
+}
+function stopClassicMusic() {
+  if (bgAudio) {
+    bgAudio.pause();
+    bgAudio.currentTime = 0;
+    bgAudio = null;
+  }
+}
+
 function startGame() {
   document.getElementById('home-screen').style.display = 'none';
   document.getElementById('game-container').style.display = 'flex';
@@ -452,9 +471,12 @@ function startGame() {
   crownPos = null;
   gameStarted = false;
   if (gameMode === 'advanced') {
+    clearAdvancedMode();
     setupAdvancedMode();
+    stopClassicMusic();
   } else {
     clearAdvancedMode();
+    playClassicMusic();
   }
   startCountdown();
 }
@@ -475,6 +497,7 @@ function setHighscoreIfNeeded(timeSurvived) {
 function endGame(win) {
   if (moveInterval) clearInterval(moveInterval);
   if (timerInterval) clearInterval(timerInterval);
+  stopClassicMusic();
   const survived = Math.floor((Date.now() - startTime) / 1000);
   setHighscoreIfNeeded(survived);
   if (win) {
