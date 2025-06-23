@@ -16,6 +16,11 @@ let playerSpeedBoost = false;
 let playerSpeedBoostTimeout = null;
 let playerSlowed = false;
 let chaserSlowed = false;
+let gameMode = 'classic';
+let chasers = [];
+let movingObstacles = [];
+let teleporters = [];
+let timedEventTimeout = null;
 
 // Touch controls for mobile
 let touchStartX = null, touchStartY = null;
@@ -191,7 +196,7 @@ function startCountdown() {
       startMsg.style.display = 'none';
       gameStarted = true;
       if (moveInterval) clearInterval(moveInterval);
-      moveInterval = setInterval(moveChaser, 300);
+      moveInterval = setInterval(moveChasers, 300);
       if (crownTimeout) clearTimeout(crownTimeout);
       crownPos = null;
       crownTimeout = setTimeout(placeCrown, 10000);
@@ -245,6 +250,13 @@ function movePlayer(direction) {
   if (direction === 'right') nextX++;
   if (map[nextY] && (map[nextY][nextX] === 0 || map[nextY][nextX] === 2)) {
     playerPos = { x: nextX, y: nextY };
+    // Teleporter logic (advanced mode)
+    if (gameMode === 'advanced') {
+      const tp = teleporters.find(t => t.x === playerPos.x && t.y === playerPos.y);
+      if (tp) {
+        playerPos = { x: tp.tx, y: tp.ty };
+      }
+    }
     // Power-up collection
     if (powerUpPos && playerPos.x === powerUpPos.x && playerPos.y === powerUpPos.y) {
       playerSpeedBoost = true;
@@ -302,10 +314,7 @@ function moveChaser() {
     const visited = Array(map.length).fill().map(() => Array(map[0].length).fill(false));
     visited[start.y][start.x] = true;
     const dirs = [
-      { x: 0, y: -1 }, // up
-      { x: 0, y: 1 },  // down
-      { x: -1, y: 0 }, // left
-      { x: 1, y: 0 }   // right
+      { x: 0, y: -1 }, { x: 0, y: 1 }, { x: -1, y: 0 }, { x: 1, y: 0 }
     ];
     while (queue.length) {
       const path = queue.shift();
@@ -373,16 +382,82 @@ function placeCrown() {
   placeCharacters();
 }
 
-function startGame() {
-    document.getElementById('home-screen').style.display = 'none';
-    document.getElementById('game-container').style.display = 'flex';
-    createGrid();
-    if (moveInterval) clearInterval(moveInterval);
-    if (crownTimeout) clearTimeout(crownTimeout);
-    crownPos = null;
-    gameStarted = false;
-    startCountdown();
+// Listen for mode change
+window.addEventListener('DOMContentLoaded', () => {
+  document.querySelectorAll('input[name="mode"]').forEach(radio => {
+    radio.addEventListener('change', e => {
+      gameMode = e.target.value;
+    });
+  });
+});
+
+function setupAdvancedMode() {
+  // Add a second chaser with different AI
+  chasers = [
+    { x: 13, y: 9, type: 'normal' },
+    { x: 1, y: 9, type: 'random' }
+  ];
+  // Example: add a moving obstacle
+  movingObstacles = [{ x: 7, y: 5, dir: 1 }];
+  // Teleporter setup: avoid player/chaser spawn points
+  function safeTeleporterCell(avoid) {
+    let emptyCells = [];
+    for (let y = 0; y < map.length; y++) {
+      for (let x = 0; x < map[0].length; x++) {
+        if (
+          map[y][x] === 0 &&
+          !avoid.some(pos => pos.x === x && pos.y === y)
+        ) {
+          emptyCells.push({ x, y });
+        }
+      }
+    }
+    return emptyCells[Math.floor(Math.random() * emptyCells.length)];
   }
+  const avoid = [
+    { x: playerPos.x, y: playerPos.y },
+    ...chasers.map(c => ({ x: c.x, y: c.y }))
+  ];
+  const tp1 = safeTeleporterCell(avoid);
+  avoid.push(tp1);
+  const tp2 = safeTeleporterCell(avoid);
+  teleporters = [
+    { x: tp1.x, y: tp1.y, tx: tp2.x, ty: tp2.y },
+    { x: tp2.x, y: tp2.y, tx: tp1.x, ty: tp1.y }
+  ];
+  // Timed event: double speed for 10 seconds every 20 seconds
+  function triggerTimedEvent() {
+    playerSpeedBoost = true;
+    if (playerSpeedBoostTimeout) clearTimeout(playerSpeedBoostTimeout);
+    playerSpeedBoostTimeout = setTimeout(() => { playerSpeedBoost = false; }, 10000);
+    timedEventTimeout = setTimeout(triggerTimedEvent, 20000);
+  }
+  if (timedEventTimeout) clearTimeout(timedEventTimeout);
+  timedEventTimeout = setTimeout(triggerTimedEvent, 20000);
+}
+
+function clearAdvancedMode() {
+  chasers = [];
+  movingObstacles = [];
+  teleporters = [];
+  if (timedEventTimeout) clearTimeout(timedEventTimeout);
+}
+
+function startGame() {
+  document.getElementById('home-screen').style.display = 'none';
+  document.getElementById('game-container').style.display = 'flex';
+  createGrid();
+  if (moveInterval) clearInterval(moveInterval);
+  if (crownTimeout) clearTimeout(crownTimeout);
+  crownPos = null;
+  gameStarted = false;
+  if (gameMode === 'advanced') {
+    setupAdvancedMode();
+  } else {
+    clearAdvancedMode();
+  }
+  startCountdown();
+}
 
 function updateHighscoreDisplay() {
   const hs = localStorage.getItem('highscore') || '0';
@@ -533,5 +608,217 @@ function shareBestTime() {
     navigator.clipboard.writeText(text);
     alert('Copied to clipboard!');
   }
+}
+
+function moveChasers() {
+  if (gameMode !== 'advanced') {
+    moveChaser();
+    return;
+  }
+  // Timed event: double chaser speed
+  let chaserMoves = 1;
+  if (window.chaserSpeedBoost) chaserMoves = 2;
+  for (let m = 0; m < chaserMoves; m++) {
+    for (let i = 0; i < chasers.length; i++) {
+      let chaser = chasers[i];
+      if (chaser.type === 'normal') {
+        // BFS to player
+        function bfs(start, goal) {
+          const queue = [[start]];
+          const visited = Array(map.length).fill().map(() => Array(map[0].length).fill(false));
+          visited[start.y][start.x] = true;
+          const dirs = [
+            { x: 0, y: -1 }, { x: 0, y: 1 }, { x: -1, y: 0 }, { x: 1, y: 0 }
+          ];
+          while (queue.length) {
+            const path = queue.shift();
+            const { x, y } = path[path.length - 1];
+            if (x === goal.x && y === goal.y) return path;
+            for (const d of dirs) {
+              const nx = x + d.x, ny = y + d.y;
+              if (
+                ny >= 0 && ny < map.length &&
+                nx >= 0 && nx < map[0].length &&
+                map[ny][nx] !== 1 &&
+                !visited[ny][nx] &&
+                !chasers.some((c, idx) => idx !== i && c.x === nx && c.y === ny)
+              ) {
+                visited[ny][nx] = true;
+                queue.push([...path, { x: nx, y: ny }]);
+              }
+            }
+          }
+          return null;
+        }
+        const path = bfs(chaser, playerPos);
+        if (path && path.length > 1) {
+          const next = path[1];
+          // Teleporters
+          const tp = teleporters.find(t => t.x === next.x && t.y === next.y);
+          if (tp) {
+            chaser.x = tp.tx;
+            chaser.y = tp.ty;
+          } else {
+            chaser.x = next.x;
+            chaser.y = next.y;
+          }
+          // Obstacle slow
+          if (map[chaser.y][chaser.x] === 2) chaser.slowed = true;
+        }
+      } else if (chaser.type === 'random') {
+        // Random valid move
+        const dirs = [
+          { x: 0, y: -1 }, { x: 0, y: 1 }, { x: -1, y: 0 }, { x: 1, y: 0 }
+        ];
+        const moves = dirs.map(d => ({ x: chaser.x + d.x, y: chaser.y + d.y }))
+          .filter(pos =>
+            pos.y >= 0 && pos.y < map.length &&
+            pos.x >= 0 && pos.x < map[0].length &&
+            map[pos.y][pos.x] !== 1 &&
+            !chasers.some((c, idx) => idx !== i && c.x === pos.x && c.y === pos.y)
+          );
+        if (moves.length) {
+          const next = moves[Math.floor(Math.random() * moves.length)];
+          // Teleporters
+          const tp = teleporters.find(t => t.x === next.x && t.y === next.y);
+          if (tp) {
+            chaser.x = tp.tx;
+            chaser.y = tp.ty;
+          } else {
+            chaser.x = next.x;
+            chaser.y = next.y;
+          }
+          if (map[chaser.y][chaser.x] === 2) chaser.slowed = true;
+        }
+      }
+      // Obstacle slow
+      if (chaser.slowed) {
+        chaser.slowed = false;
+        break; // skip this chaser's move this turn
+      }
+      // Check for player caught
+      if (playerPos.x === chaser.x && playerPos.y === chaser.y) {
+        endGame(false);
+        return;
+      }
+    }
+  }
+  placeCharacters();
+  // Check for player win
+  if (crownPos && playerPos.x === crownPos.x && playerPos.y === crownPos.y) {
+    endGame(true);
+    return;
+  }
+}
+
+// Move moving obstacles every second in advanced mode
+setInterval(() => {
+  if (gameMode !== 'advanced' || !movingObstacles.length) return;
+  for (let obs of movingObstacles) {
+    // Move horizontally, bounce at walls
+    let nx = obs.x + obs.dir;
+    if (nx < 0 || nx >= map[0].length || map[obs.y][nx] === 1) {
+      obs.dir *= -1;
+      nx = obs.x + obs.dir;
+    }
+    if (map[obs.y][nx] === 0) obs.x = nx;
+  }
+  placeCharacters();
+}, 1000);
+
+// Patch placeCharacters to render all chasers, moving obstacles, and teleporters
+function placeCharacters() {
+  grid.forEach(cell => (cell.innerHTML = ''));
+  // Render obstacles
+  grid.forEach(cell => {
+    const x = +cell.dataset.x, y = +cell.dataset.y;
+    if (map[y][x] === 2) {
+      const obs = document.createElement('div');
+      obs.className = 'obstacle';
+      cell.appendChild(obs);
+    }
+  });
+  // Render moving obstacles
+  if (gameMode === 'advanced') {
+    for (let obs of movingObstacles) {
+      const cell = getCell(obs.x, obs.y);
+      if (cell) {
+        const mob = document.createElement('div');
+        mob.className = 'obstacle';
+        mob.style.background = 'repeating-linear-gradient(45deg,#f44336 0 10px,#b71c1c 10px 20px)';
+        mob.style.borderColor = '#f44336';
+        cell.appendChild(mob);
+      }
+    }
+  }
+  // Render teleporters
+  if (gameMode === 'advanced') {
+    for (let tp of teleporters) {
+      const cell = getCell(tp.x, tp.y);
+      if (cell) {
+        const tel = document.createElement('div');
+        tel.className = 'teleporter';
+        tel.title = 'Teleporter';
+        cell.appendChild(tel);
+      }
+    }
+  }
+  // Player
+  const playerCell = getCell(playerPos.x, playerPos.y);
+  if (playerCell) {
+    const playerEl = document.createElement('img');
+    playerEl.src = playerImg;
+    playerEl.classList.add('player');
+    playerCell.appendChild(playerEl);
+    if (playerPos.x !== lastPlayerPos.x || playerPos.y !== lastPlayerPos.y) {
+      animateMove('player', playerPos);
+    }
+  }
+  // Chasers
+  if (gameMode === 'advanced') {
+    for (let chaser of chasers) {
+      const chaserCell = getCell(chaser.x, chaser.y);
+      if (chaserCell) {
+        const chaserEl = document.createElement('img');
+        chaserEl.src = chaserImg;
+        chaserEl.classList.add('chaser');
+        chaserCell.appendChild(chaserEl);
+        if (chaser.x !== lastChaserPos.x || chaser.y !== lastChaserPos.y) {
+          animateMove('chaser', chaser);
+        }
+      }
+    }
+  } else {
+    const chaserCell = getCell(chaserPos.x, chaserPos.y);
+    if (chaserCell) {
+      const chaserEl = document.createElement('img');
+      chaserEl.src = chaserImg;
+      chaserEl.classList.add('chaser');
+      chaserCell.appendChild(chaserEl);
+      if (chaserPos.x !== lastChaserPos.x || chaserPos.y !== lastChaserPos.y) {
+        animateMove('chaser', chaserPos);
+      }
+    }
+  }
+  // Crown
+  const crownCell = crownPos ? getCell(crownPos.x, crownPos.y) : null;
+  if (crownCell) {
+    const crownEl = document.createElement('img');
+    crownEl.src = 'https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/72x72/1f451.png';
+    crownEl.alt = 'Crown';
+    crownEl.classList.add('crown');
+    crownCell.appendChild(crownEl);
+  }
+  // Power-up
+  const powerUpCell = powerUpPos ? getCell(powerUpPos.x, powerUpPos.y) : null;
+  if (powerUpCell) {
+    const powerEl = document.createElement('img');
+    powerEl.src = 'https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/72x72/26a1.png';
+    powerEl.alt = 'Power-Up';
+    powerEl.className = 'powerup';
+    powerUpCell.appendChild(powerEl);
+  }
+  lastPlayerPos = { ...playerPos };
+  lastChaserPos = { ...chaserPos };
 }
   
