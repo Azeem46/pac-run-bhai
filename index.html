@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Pac-Run Bhai</title>
+  <link rel="stylesheet" href="style.css"/>
+</head>
+<body>
+
+  <!-- Home Screen -->
+  <div id="home-screen">
+    <div class="animated-bg"></div>
+    <div class="glass-card animated-fadein">
+      <h1 class="main-title">Pac-Run Bhai</h1>
+      <div class="character-flex-row">
+        <div class="character-col">
+          <div class="section-label">My Characters</div>
+          <div id="my-characters" class="character-row"></div>
+        </div>
+        <div class="character-vdivider"></div>
+        <div class="character-col">
+          <div class="section-label">Default Characters</div>
+          <div id="character-options" class="character-row">
+            <img src="chaseer.webp" class="character" onclick="selectCharacter('face1.png')">
+            <img src="chaser.jpg" class="character" onclick="selectCharacter('face2.png')">
+            <img src="hello.png" class="character" onclick="selectCharacter('face3.png')">
+          </div>
+        </div>
+      </div>
+      <div class="divider-glass"><span>OR</span></div>
+      <div class="section-label">Upload Your Own</div>
+      <div class="upload-area-flex">
+        <div class="upload-section-flex">
+          <label class="upload-label-flex">
+            <span class="upload-icon-flex">🧑‍🎤</span> Player
+            <input type="file" accept="image/*" onchange="handleUpload(event, 'player')">
+          </label>
+          <img id="player-preview" class="preview-img-flex" style="display:none;"/>
+        </div>
+        <div class="upload-section-flex">
+          <label class="upload-label-flex">
+            <span class="upload-icon-flex">👹</span> Chaser
+            <input type="file" accept="image/*" onchange="handleUpload(event, 'chaser')">
+          </label>
+          <img id="chaser-preview" class="preview-img-flex" style="display:none;"/>
+        </div>
+      </div>
+      <div class="upload-hint-flex">Tip: Use a clear face image for best results!</div>
+      <div class="highscore-area"><span class="highscore-label">Highest Time Survived:</span> <span id="highscore">0</span> <span class="highscore-unit">sec</span></div>
+      <button id="start-game-btn" class="animated-btn" onclick="startGame()" disabled>Start Game</button>
+    </div>
+  </div>
+
+
+  
+
+  <!-- Game Screen -->
+  <div id="game-container" style="display: none;">
+    <div id="game-grid"></div>
+    <div class="start-msg" id="startMsg">Get Ready...</div>
+  </div>
+
+  <script src="script.js"></script>
+</body>
+</html>
