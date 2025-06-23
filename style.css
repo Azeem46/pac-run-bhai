@@ -132,6 +132,15 @@ body {
     object-fit: contain;
     border-radius: 6px;
     box-shadow: 0 1px 6px #0003;
+    transition: filter 0.2s;
+  }
+  .player.bounce, .chaser.bounce {
+    animation: bounce-move 0.25s cubic-bezier(.5,1.8,.5,1);
+  }
+  @keyframes bounce-move {
+    0% { transform: scale(1) translateY(0); }
+    40% { transform: scale(1.12,0.88) translateY(-8px); }
+    100% { transform: scale(1) translateY(0); }
   }
   
   .start-msg {
@@ -294,6 +303,11 @@ body {
     filter: drop-shadow(0 0 8px #ffd700cc);
     z-index: 2;
     pointer-events: none;
+    animation: pop-crown 0.4s cubic-bezier(.5,1.8,.5,1);
+  }
+  @keyframes pop-crown {
+    0% { transform: scale(0.5); opacity: 0; }
+    100% { transform: scale(1); opacity: 1; }
   }
   
   .glass-card {
@@ -738,5 +752,60 @@ body {
     border: 2px solid #bfa600;
     z-index: 1;
     margin: auto;
+  }
+  
+  .high-contrast body,
+  body.high-contrast {
+    background: #000 !important;
+    color: #fff !important;
+  }
+  .high-contrast .glass-card,
+  body.high-contrast .glass-card {
+    background: #111 !important;
+    color: #fff !important;
+    border: 2px solid #fff !important;
+  }
+  .high-contrast .character,
+  .high-contrast .character-user {
+    border-color: #fff !important;
+    background: #000 !important;
+  }
+  .high-contrast .obstacle {
+    background: #fff !important;
+    border-color: #fff !important;
+  }
+  .high-contrast .powerup,
+  .high-contrast .crown {
+    filter: none !important;
+  }
+  .sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0,0,0,0);
+    border: 0;
+  }
+  .share-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: linear-gradient(90deg, #1976d2 60%, #64b5f6 100%);
+    color: #fff;
+    font-size: 1.1em;
+    font-weight: bold;
+    border: none;
+    border-radius: 12px;
+    padding: 10px 28px;
+    margin: 1.2em auto 0 auto;
+    box-shadow: 0 2px 8px #0002;
+    cursor: pointer;
+    transition: background 0.2s, transform 0.2s;
+  }
+  .share-btn:active {
+    background: #1565c0;
+    transform: scale(0.97);
   }
   

@@ -14,6 +14,8 @@ let powerUpPos = null;
 let powerUpTimeout = null;
 let playerSpeedBoost = false;
 let playerSpeedBoostTimeout = null;
+let playerSlowed = false;
+let chaserSlowed = false;
 
 // Touch controls for mobile
 let touchStartX = null, touchStartY = null;
@@ -100,7 +102,22 @@ function getCell(x, y) {
   return grid.find(c => +c.dataset.x === x && +c.dataset.y === y);
 }
 
-// Draw runner & chaser
+// Animate player/chaser on move
+function animateMove(type, pos) {
+  const cell = getCell(pos.x, pos.y);
+  if (!cell) return;
+  const img = cell.querySelector(type === 'player' ? '.player' : '.chaser');
+  if (img) {
+    img.classList.remove('bounce');
+    void img.offsetWidth; // force reflow
+    img.classList.add('bounce');
+    setTimeout(() => img.classList.remove('bounce'), 250);
+  }
+}
+
+// Patch placeCharacters to animate on move
+let lastPlayerPos = { x: 1, y: 1 };
+let lastChaserPos = { x: 13, y: 9 };
 function placeCharacters() {
   grid.forEach(cell => (cell.innerHTML = ''));
 
@@ -124,6 +141,9 @@ function placeCharacters() {
     playerEl.src = playerImg;
     playerEl.classList.add('player');
     playerCell.appendChild(playerEl);
+    if (playerPos.x !== lastPlayerPos.x || playerPos.y !== lastPlayerPos.y) {
+      animateMove('player', playerPos);
+    }
   }
 
   if (chaserCell) {
@@ -131,6 +151,9 @@ function placeCharacters() {
     chaserEl.src = chaserImg;
     chaserEl.classList.add('chaser');
     chaserCell.appendChild(chaserEl);
+    if (chaserPos.x !== lastChaserPos.x || chaserPos.y !== lastChaserPos.y) {
+      animateMove('chaser', chaserPos);
+    }
   }
 
   if (crownCell) {
@@ -148,6 +171,8 @@ function placeCharacters() {
     powerEl.className = 'powerup';
     powerUpCell.appendChild(powerEl);
   }
+  lastPlayerPos = { ...playerPos };
+  lastChaserPos = { ...chaserPos };
 }
 
 // Countdown to start
@@ -208,13 +233,17 @@ function handleTouchEnd(e) {
 }
 function movePlayer(direction) {
   if (!gameStarted) return;
+  if (playerSlowed) {
+    playerSlowed = false;
+    return; // Skip this turn
+  }
   let nextX = playerPos.x;
   let nextY = playerPos.y;
   if (direction === 'up') nextY--;
   if (direction === 'down') nextY++;
   if (direction === 'left') nextX--;
   if (direction === 'right') nextX++;
-  if (map[nextY] && map[nextY][nextX] === 0) {
+  if (map[nextY] && (map[nextY][nextX] === 0 || map[nextY][nextX] === 2)) {
     playerPos = { x: nextX, y: nextY };
     // Power-up collection
     if (powerUpPos && playerPos.x === powerUpPos.x && playerPos.y === powerUpPos.y) {
@@ -224,6 +253,10 @@ function movePlayer(direction) {
       powerUpPos = null;
       placeCharacters();
       // TODO: Add sound/effect
+    }
+    // If stepped on obstacle, slow next move
+    if (map[nextY][nextX] === 2) {
+      playerSlowed = true;
     }
     placeCharacters();
   }
@@ -249,6 +282,20 @@ document.getElementById('game-grid').addEventListener('touchend', handleTouchEnd
 
 // Basic AI chaser
 function moveChaser() {
+  if (chaserSlowed) {
+    chaserSlowed = false;
+    placeCharacters();
+    // Still check for win/lose
+    if (playerPos.x === chaserPos.x && playerPos.y === chaserPos.y) {
+      endGame(false);
+      return;
+    }
+    if (crownPos && playerPos.x === crownPos.x && playerPos.y === crownPos.y) {
+      endGame(true);
+      return;
+    }
+    return; // Skip this turn
+  }
   // Use BFS to find the shortest path from chaser to player
   function bfs(start, goal) {
     const queue = [[start]];
@@ -282,7 +329,12 @@ function moveChaser() {
 
   const path = bfs(chaserPos, playerPos);
   if (path && path.length > 1) {
-    chaserPos = { ...path[1] };
+    const next = path[1];
+    // If next cell is obstacle, slow chaser next turn
+    if (map[next.y][next.x] === 2) {
+      chaserSlowed = true;
+    }
+    chaserPos = { ...next };
   }
 
   placeCharacters();
@@ -451,5 +503,31 @@ function placePowerUp() {
   }
   powerUpPos = emptyCells.length ? emptyCells[Math.floor(Math.random() * emptyCells.length)] : null;
   placeCharacters();
+}
+
+// High-contrast mode toggle
+function toggleHighContrast() {
+  document.body.classList.toggle('high-contrast');
+  localStorage.setItem('highContrast', document.body.classList.contains('high-contrast') ? '1' : '0');
+}
+
+// On load, restore high-contrast
+window.addEventListener('DOMContentLoaded', () => {
+  if (localStorage.getItem('highContrast') === '1') document.body.classList.add('high-contrast');
+  document.querySelectorAll('.character, .character-user, .character-delete, #start-game-btn, .share-btn, .high-contrast-btn').forEach(el => {
+    el.setAttribute('tabindex', '0');
+  });
+});
+
+// Share feature
+function shareBestTime() {
+  const hs = localStorage.getItem('highscore') || '0';
+  const text = `My best time in Pac-Run Bhai: ${hs} seconds! Can you beat me?`;
+  if (navigator.share) {
+    navigator.share({ title: 'Pac-Run Bhai', text });
+  } else {
+    navigator.clipboard.writeText(text);
+    alert('Copied to clipboard!');
+  }
 }
   
