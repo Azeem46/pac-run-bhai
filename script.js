@@ -22,6 +22,7 @@ let movingObstacles = [];
 let teleporters = [];
 let timedEventTimeout = null;
 let bgAudio = null;
+let soundEnabled = true;
 
 // Touch controls for mobile
 let touchStartX = null, touchStartY = null;
@@ -444,6 +445,21 @@ function clearAdvancedMode() {
   if (timedEventTimeout) clearTimeout(timedEventTimeout);
 }
 
+function updateSoundIcon() {
+  const btn = document.getElementById('sound-toggle-btn');
+  if (btn) btn.innerHTML = '<span class="sr-only">Toggle sound</span>' + (soundEnabled ? '🔊' : '🔇');
+}
+function toggleSound() {
+  soundEnabled = !soundEnabled;
+  localStorage.setItem('soundEnabled', soundEnabled ? '1' : '0');
+  updateSoundIcon();
+  if (bgAudio) bgAudio.muted = !soundEnabled;
+}
+window.addEventListener('DOMContentLoaded', () => {
+  soundEnabled = localStorage.getItem('soundEnabled') !== '0';
+  updateSoundIcon();
+});
+
 function playClassicMusic() {
   if (bgAudio) {
     bgAudio.pause();
@@ -452,14 +468,20 @@ function playClassicMusic() {
   bgAudio = new Audio('audio/robot.mp3');
   bgAudio.loop = true;
   bgAudio.volume = 0.5;
+  bgAudio.muted = !soundEnabled;
   bgAudio.play();
 }
-function stopClassicMusic() {
+function playAdvancedMusic() {
   if (bgAudio) {
     bgAudio.pause();
     bgAudio.currentTime = 0;
-    bgAudio = null;
   }
+  bgAudio = new Audio('audio/robot.mp3');
+  bgAudio.loop = true;
+  bgAudio.volume = 0.5;
+  bgAudio.muted = !soundEnabled;
+  bgAudio.playbackRate = 1.5;
+  bgAudio.play();
 }
 
 function startGame() {
@@ -473,7 +495,7 @@ function startGame() {
   if (gameMode === 'advanced') {
     clearAdvancedMode();
     setupAdvancedMode();
-    stopClassicMusic();
+    playAdvancedMusic();
   } else {
     clearAdvancedMode();
     playClassicMusic();
@@ -497,7 +519,7 @@ function setHighscoreIfNeeded(timeSurvived) {
 function endGame(win) {
   if (moveInterval) clearInterval(moveInterval);
   if (timerInterval) clearInterval(timerInterval);
-  stopClassicMusic();
+  if (bgAudio) bgAudio.pause();
   const survived = Math.floor((Date.now() - startTime) / 1000);
   setHighscoreIfNeeded(survived);
   if (win) {

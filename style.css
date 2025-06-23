@@ -885,3 +885,10 @@ body {
     pointer-events: none;
   }
   
+  #sound-toggle-btn {
+    margin-right: 60px;
+  }
+  .theme-toggle-btn + .theme-toggle-btn, #theme-toggle-btn + #sound-toggle-btn {
+    margin-left: 8px;
+  }
+  
