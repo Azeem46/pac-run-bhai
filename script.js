@@ -10,6 +10,13 @@ let crownPos = null;
 let crownTimeout = null;
 let startTime = null;
 let timerInterval = null;
+let powerUpPos = null;
+let powerUpTimeout = null;
+let playerSpeedBoost = false;
+let playerSpeedBoostTimeout = null;
+
+// Touch controls for mobile
+let touchStartX = null, touchStartY = null;
 
 const gridContainer = document.getElementById('game-grid');
 const startMsg = document.getElementById('startMsg');
@@ -100,6 +107,17 @@ function placeCharacters() {
   const playerCell = getCell(playerPos.x, playerPos.y);
   const chaserCell = getCell(chaserPos.x, chaserPos.y);
   const crownCell = crownPos ? getCell(crownPos.x, crownPos.y) : null;
+  const powerUpCell = powerUpPos ? getCell(powerUpPos.x, powerUpPos.y) : null;
+
+  // Render obstacles
+  grid.forEach(cell => {
+    const x = +cell.dataset.x, y = +cell.dataset.y;
+    if (map[y][x] === 2) {
+      const obs = document.createElement('div');
+      obs.className = 'obstacle';
+      cell.appendChild(obs);
+    }
+  });
 
   if (playerCell) {
     const playerEl = document.createElement('img');
@@ -121,6 +139,14 @@ function placeCharacters() {
     crownEl.alt = 'Crown';
     crownEl.classList.add('crown');
     crownCell.appendChild(crownEl);
+  }
+
+  if (powerUpCell) {
+    const powerEl = document.createElement('img');
+    powerEl.src = 'https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/72x72/26a1.png';
+    powerEl.alt = 'Power-Up';
+    powerEl.className = 'powerup';
+    powerUpCell.appendChild(powerEl);
   }
 }
 
@@ -150,27 +176,76 @@ function startCountdown() {
         const now = Date.now();
         const survived = Math.floor((now - startTime) / 1000);
       }, 1000);
+      if (powerUpTimeout) clearTimeout(powerUpTimeout);
+      powerUpPos = null;
+      powerUpTimeout = setTimeout(placePowerUp, 7000);
     }
   }, 1000);
 }
 
-// Movement control
-document.addEventListener('keydown', (e) => {
+// Touch controls for mobile
+function handleTouchStart(e) {
+  const t = e.touches[0];
+  touchStartX = t.clientX;
+  touchStartY = t.clientY;
+}
+function handleTouchEnd(e) {
+  if (touchStartX === null || touchStartY === null) return;
+  const t = e.changedTouches[0];
+  const dx = t.clientX - touchStartX;
+  const dy = t.clientY - touchStartY;
+  if (Math.abs(dx) > Math.abs(dy) && Math.abs(dx) > 30) {
+    // Horizontal swipe
+    if (dx > 0) movePlayer('right');
+    else movePlayer('left');
+  } else if (Math.abs(dy) > 30) {
+    // Vertical swipe
+    if (dy > 0) movePlayer('down');
+    else movePlayer('up');
+  }
+  touchStartX = null;
+  touchStartY = null;
+}
+function movePlayer(direction) {
   if (!gameStarted) return;
-
   let nextX = playerPos.x;
   let nextY = playerPos.y;
-
-  if (e.key === 'ArrowUp') nextY--;
-  if (e.key === 'ArrowDown') nextY++;
-  if (e.key === 'ArrowLeft') nextX--;
-  if (e.key === 'ArrowRight') nextX++;
-
+  if (direction === 'up') nextY--;
+  if (direction === 'down') nextY++;
+  if (direction === 'left') nextX--;
+  if (direction === 'right') nextX++;
   if (map[nextY] && map[nextY][nextX] === 0) {
     playerPos = { x: nextX, y: nextY };
+    // Power-up collection
+    if (powerUpPos && playerPos.x === powerUpPos.x && playerPos.y === powerUpPos.y) {
+      playerSpeedBoost = true;
+      if (playerSpeedBoostTimeout) clearTimeout(playerSpeedBoostTimeout);
+      playerSpeedBoostTimeout = setTimeout(() => { playerSpeedBoost = false; }, 5000);
+      powerUpPos = null;
+      placeCharacters();
+      // TODO: Add sound/effect
+    }
     placeCharacters();
   }
+}
+
+// Patch keyboard to use movePlayer
+document.addEventListener('keydown', (e) => {
+  if (!gameStarted) return;
+  if (['ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(e.key)) {
+    e.preventDefault();
+    if (e.key === 'ArrowUp') movePlayer('up');
+    if (e.key === 'ArrowDown') movePlayer('down');
+    if (e.key === 'ArrowLeft') movePlayer('left');
+    if (e.key === 'ArrowRight') movePlayer('right');
+  }
 });
+
+// Add touch listeners to both game-container and game-grid
+document.getElementById('game-container').addEventListener('touchstart', handleTouchStart, { passive: false });
+document.getElementById('game-container').addEventListener('touchend', handleTouchEnd, { passive: false });
+document.getElementById('game-grid').addEventListener('touchstart', handleTouchStart, { passive: false });
+document.getElementById('game-grid').addEventListener('touchend', handleTouchEnd, { passive: false });
 
 // Basic AI chaser
 function moveChaser() {
@@ -358,4 +433,23 @@ window.addEventListener('DOMContentLoaded', () => {
   updateHighscoreDisplay && updateHighscoreDisplay();
   renderRecentCharacters();
 });
+
+// Power-up spawn logic
+function placePowerUp() {
+  let emptyCells = [];
+  for (let y = 0; y < map.length; y++) {
+    for (let x = 0; x < map[0].length; x++) {
+      if (
+        map[y][x] === 0 &&
+        !(playerPos.x === x && playerPos.y === y) &&
+        !(chaserPos.x === x && chaserPos.y === y) &&
+        !(crownPos && crownPos.x === x && crownPos.y === y)
+      ) {
+        emptyCells.push({ x, y });
+      }
+    }
+  }
+  powerUpPos = emptyCells.length ? emptyCells[Math.floor(Math.random() * emptyCells.length)] : null;
+  placeCharacters();
+}
   

@@ -94,6 +94,7 @@ body {
     width: 100vw;
     position: relative;
     background: linear-gradient(135deg, #232526 0%, #414345 100%);
+    touch-action: none;
   }
   
   #game-grid {
@@ -107,6 +108,7 @@ body {
     background: #111;
     box-shadow: 0 0 32px #000a;
     border-radius: 18px;
+    touch-action: none;
   }
   
   .cell {
@@ -712,5 +714,29 @@ body {
       margin: 18px auto;
       background: linear-gradient(90deg, #ffd54f 0%, #1976d2 100%);
     }
+  }
+  
+  .powerup {
+    width: 80%;
+    height: 80%;
+    object-fit: contain;
+    filter: drop-shadow(0 0 12px #ffd700cc);
+    z-index: 2;
+    pointer-events: none;
+    animation: powerup-pop 0.5s cubic-bezier(.5,1.8,.5,1);
+  }
+  @keyframes powerup-pop {
+    0% { transform: scale(0.5); opacity: 0; }
+    100% { transform: scale(1); opacity: 1; }
+  }
+  .obstacle {
+    width: 90%;
+    height: 90%;
+    background: repeating-linear-gradient(135deg, #444 0 10px, #222 10px 20px);
+    border-radius: 8px;
+    box-shadow: 0 2px 8px #0006;
+    border: 2px solid #bfa600;
+    z-index: 1;
+    margin: auto;
   }
   
