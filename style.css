@@ -809,3 +809,32 @@ body {
     transform: scale(0.97);
   }
   
+  .theme-toggle-btn {
+    position: absolute;
+    top: 18px;
+    right: 18px;
+    z-index: 10;
+    background: rgba(255,255,255,0.85);
+    color: #1976d2;
+    border: none;
+    border-radius: 50%;
+    width: 48px;
+    height: 48px;
+    font-size: 2em;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 2px 8px #0002;
+    cursor: pointer;
+    transition: background 0.2s, color 0.2s;
+    outline: none;
+  }
+  .theme-toggle-btn:active, .theme-toggle-btn:focus {
+    background: #1976d2;
+    color: #fff;
+  }
+  body.high-contrast .theme-toggle-btn {
+    background: #222;
+    color: #ffd54f;
+  }
+  

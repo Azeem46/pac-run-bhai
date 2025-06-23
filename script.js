@@ -509,11 +509,15 @@ function placePowerUp() {
 function toggleHighContrast() {
   document.body.classList.toggle('high-contrast');
   localStorage.setItem('highContrast', document.body.classList.contains('high-contrast') ? '1' : '0');
+  const btn = document.getElementById('theme-toggle-btn');
+  if (btn) btn.innerHTML = '<span class="sr-only">Toggle high contrast mode</span>' + (document.body.classList.contains('high-contrast') ? '🌙' : '🌞');
 }
 
 // On load, restore high-contrast
 window.addEventListener('DOMContentLoaded', () => {
   if (localStorage.getItem('highContrast') === '1') document.body.classList.add('high-contrast');
+  const btn = document.getElementById('theme-toggle-btn');
+  if (btn) btn.innerHTML = '<span class="sr-only">Toggle high contrast mode</span>' + (document.body.classList.contains('high-contrast') ? '🌙' : '🌞');
   document.querySelectorAll('.character, .character-user, .character-delete, #start-game-btn, .share-btn, .high-contrast-btn').forEach(el => {
     el.setAttribute('tabindex', '0');
   });
