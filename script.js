@@ -264,6 +264,7 @@ function movePlayer(direction) {
       playerSpeedBoost = true;
       if (playerSpeedBoostTimeout) clearTimeout(playerSpeedBoostTimeout);
       playerSpeedBoostTimeout = setTimeout(() => { playerSpeedBoost = false; }, 5000);
+      spawnParticles(playerPos.x, playerPos.y, '#ffd700');
       powerUpPos = null;
       placeCharacters();
       // TODO: Add sound/effect
@@ -465,23 +466,57 @@ function playClassicMusic() {
     bgAudio.pause();
     bgAudio.currentTime = 0;
   }
-  bgAudio = new Audio('audio/robot.mp3');
+  bgAudio = new Audio('audio/renoir.mp3');
   bgAudio.loop = true;
   bgAudio.volume = 0.5;
   bgAudio.muted = !soundEnabled;
-  bgAudio.play();
+  // Debug: log when audio is loaded or errors
+  bgAudio.addEventListener('canplaythrough', () => {
+    console.log('Audio loaded successfully.');
+  });
+  bgAudio.addEventListener('error', (e) => {
+    console.error('Audio failed to load:', e);
+    alert('Audio file failed to load. Please check that audio/renoir.mp3 exists and is a valid MP3.');
+  });
+  bgAudio.addEventListener('play', () => {
+    console.log('Audio started playing.');
+  });
+  bgAudio.addEventListener('pause', () => {
+    console.log('Audio paused.');
+  });
+  bgAudio.play().catch(err => {
+    console.error('Audio play() failed:', err);
+    alert('Audio could not be played. This may be due to browser autoplay restrictions. Try clicking the sound button or interacting with the page.');
+  });
 }
 function playAdvancedMusic() {
   if (bgAudio) {
     bgAudio.pause();
     bgAudio.currentTime = 0;
   }
-  bgAudio = new Audio('audio/robot.mp3');
+  bgAudio = new Audio('audio/renoir.mp3');
   bgAudio.loop = true;
   bgAudio.volume = 0.5;
   bgAudio.muted = !soundEnabled;
   bgAudio.playbackRate = 1.5;
-  bgAudio.play();
+  // Debug: log when audio is loaded or errors
+  bgAudio.addEventListener('canplaythrough', () => {
+    console.log('Audio loaded successfully.');
+  });
+  bgAudio.addEventListener('error', (e) => {
+    console.error('Audio failed to load:', e);
+    alert('Audio file failed to load. Please check that audio/renoir.mp3 exists and is a valid MP3.');
+  });
+  bgAudio.addEventListener('play', () => {
+    console.log('Audio started playing.');
+  });
+  bgAudio.addEventListener('pause', () => {
+    console.log('Audio paused.');
+  });
+  bgAudio.play().catch(err => {
+    console.error('Audio play() failed:', err);
+    alert('Audio could not be played. This may be due to browser autoplay restrictions. Try clicking the sound button or interacting with the page.');
+  });
 }
 
 function startGame() {
@@ -523,8 +558,10 @@ function endGame(win) {
   const survived = Math.floor((Date.now() - startTime) / 1000);
   setHighscoreIfNeeded(survived);
   if (win) {
+    if (playerPos) spawnParticles(playerPos.x, playerPos.y, '#4caf50');
     alert("👑 You Win! You got the crown.\nTime survived: " + survived + " sec");
   } else {
+    if (playerPos) spawnParticles(playerPos.x, playerPos.y, '#f44336');
     alert("😵 Game Over! You were caught.\nTime survived: " + survived + " sec");
   }
   location.reload();
@@ -883,4 +920,43 @@ function setupJoystick() {
   joy.querySelector('.joy-right').addEventListener('click', () => movePlayer('right'));
 }
 window.addEventListener('DOMContentLoaded', setupJoystick);
+
+// --- Particle Effect System ---
+function spawnParticles(x, y, color = '#ffd700', count = 12) {
+  const cell = getCell(x, y);
+  if (!cell) return;
+  const rect = cell.getBoundingClientRect();
+  const gridRect = gridContainer.getBoundingClientRect();
+  const cx = rect.left + rect.width / 2 - gridRect.left;
+  const cy = rect.top + rect.height / 2 - gridRect.top;
+  const container = document.createElement('div');
+  container.className = 'particle-container';
+  container.style.position = 'absolute';
+  container.style.left = `${cx}px`;
+  container.style.top = `${cy}px`;
+  container.style.pointerEvents = 'none';
+  for (let i = 0; i < count; i++) {
+    const p = document.createElement('div');
+    p.className = 'particle';
+    p.style.background = color;
+    p.style.position = 'absolute';
+    p.style.width = '8px';
+    p.style.height = '8px';
+    p.style.borderRadius = '50%';
+    p.style.opacity = '0.8';
+    const angle = (2 * Math.PI * i) / count;
+    const dist = 32 + Math.random() * 16;
+    p.style.transform = `translate(-4px, -4px)`;
+    p.animate([
+      { transform: `translate(-4px, -4px)`, opacity: 0.8 },
+      { transform: `translate(${Math.cos(angle) * dist}px, ${Math.sin(angle) * dist}px)`, opacity: 0 }
+    ], {
+      duration: 700 + Math.random() * 200,
+      easing: 'cubic-bezier(.5,1.8,.5,1)'
+    });
+    container.appendChild(p);
+  }
+  gridContainer.appendChild(container);
+  setTimeout(() => container.remove(), 900);
+}
   
